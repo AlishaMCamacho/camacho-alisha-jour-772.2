@@ -1,0 +1,926 @@
+---
+title: 'Grad Assignment: UMD Crime'
+author: "Alisha Camacho"
+date: "2023-12-04
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+**Overview of the data**
+
+I analysed the daily campus security and authority incident logs from January 1, 2023 - November 30, 2023 to examine crime and incident report trends on the University of Maryland's College Park campus. UMPD creates and maintains the data on the website, and shares relevant crime report data with the FBI through the National Incident Based Reporting System (NIBRS). 
+
+Lt. R. Hoaas, Public Information Officer, recently shared an overview of crime trends on campus with graduate students. In her presented, she noted that the majority of calls received are criminal misconduct related, and also usually entail providing services and resources to the community. Other non-crime related incidents on campus include: jump-starting your car, escorting students, etc. I decided to analyze the incident logs to get a more comprehensive understand of what is taking place on campus, that is not reported to the NIBRS. 
+
+The data in the crime and incident reports included UMPD case numbers, addresses, date of the incident, date of the report, the type of incident, and disposition/status. The UMPD case numbers gives each value a unique identification which is very helpful for sorting and cleaning the data. Unfortunately, the majority of the addresses (more than 90%) were unusable and require further cleaning and inquiry for anaylsis.
+
+###
+
+#Load Libraries
+
+```{r}
+library(tidyverse)
+library(refinr)
+library(janitor)
+library(lubridate)
+library(rvest)
+library(tibble)
+library(tidygeocoder)
+
+```
+
+#Load in and clean 2023 Daily Crime and Incident Logs
+https://www.umpd.umd.edu/stats/incident_logs.cfm
+
+In this markup, I am using the web scraping tools we recently used to extract the data. I had previously created Excel documents using the Data > Upload via url feature to pull in all data available. I did some preliminary cleaning in Excel and exported .csv files to load into R. 
+
+Using Excel, while doable,  left room for human error and was more time consuming and disorganized than directly pulling the data from the webpage(s). 
+
+On the UMPD website, the incident reports were organized in table formats by month, and each month had its own webpage, so I scrapped each webpage separately. 
+
+I started by creating a filter for January that I could replicate for the other months. I found mistakes along the way, improving the filter as I went. 
+
+The tables were formatted in a manner that required further cleaning to extract the addresses. Initially, I left them out, and then went back to re-work the filter to include them. To do this, I created a separate data frame for the addresses, and then joined the addresses back to the main data frame. 
+
+
+*January* 
+
+```{r}
+January_url <- "https://www.umpd.umd.edu/stats/incident_logs.cfm?year=2023&month=1" 
+
+January_value <- January_url |> 
+  read_html() |> 
+  html_table()  
+
+January_df <- data.frame(January_value) |> 
+  clean_names() |> rename(umpd_case_number = umpd_casenumber, date = occurred_date_timelocation, date_report = report_date_time, address = var_6) |> 
+mutate(date = date(mdy_hm(date)))  
+
+glimpse(January_df)
+  
+```
+
+#create new data frame with addresses and umpd case numbers
+
+```{r}
+January_address <- January_df |> 
+ select(umpd_case_number, address) |> 
+ filter(!str_detect(address, "NA"))
+
+glimpse(January_address)
+January_address
+
+```
+
+#rejoin address with original data frame 
+
+```{r}
+
+January <- inner_join(January_address, January_df, by = "umpd_case_number") |> 
+  select(-address.y) |> 
+  rename(address = address.x) |> 
+  filter(str_detect(date, "-"))
+  #group_by(umpd_case_number) |> 
+  #summarise(count = n()) |> 
+ # arrange(desc(count))
+
+January
+
+```
+
+*February* 
+
+```{r}
+February_url <- "https://www.umpd.umd.edu/stats/incident_logs.cfm?year=2023&month=2"
+
+February_value <- February_url |> 
+  read_html() |> 
+  html_table()  
+
+```
+
+```{r}
+February_df <- data.frame(February_value) |> 
+clean_names() |> rename(umpd_case_number = umpd_casenumber, date = occurred_date_timelocation, date_report = report_date_time, address = var_6) |> 
+mutate(date = date(mdy_hm(date)))  
+
+glimpse(February_df)
+```
+
+#create new data frame with addresses and umpd case numbers
+
+```{r}
+February_address <- February_df |> 
+ select(umpd_case_number, address) |> 
+ filter(!str_detect(address, "NA"))
+
+glimpse(February_address)
+February_address
+```
+#rejoin address with original data frame 
+
+```{r}
+February <- inner_join(February_address, February_df, by = "umpd_case_number") |> 
+  select(-address.y) |> 
+  rename(address = address.x) |> 
+  filter(str_detect(date, "-"))
+
+February
+
+```
+
+*March* 
+
+```{r}
+March_url <- "https://www.umpd.umd.edu/stats/incident_logs.cfm?year=2023&month=3"
+
+March_value <- March_url |> 
+  read_html() |> 
+  html_table()  
+
+March_df <- data.frame(March_value) |> 
+  clean_names() |> rename(umpd_case_number = umpd_casenumber, date = occurred_date_timelocation, date_report = report_date_time, address = var_6) |> 
+mutate(date = date(mdy_hm(date)))  
+
+glimpse(March_df)
+
+```
+
+#create new data frame with addresses and umpd case numbers
+
+
+```{r}
+March_address <- March_df |> 
+ select(umpd_case_number, address) |> 
+ filter(!str_detect(address, "NA"))
+
+glimpse(March_address)
+
+```
+
+#rejoin address with original data frame 
+
+```{r}
+
+March <- inner_join(March_address, March_df, by = "umpd_case_number") |> 
+  select(-address.y) |> 
+  rename(address = address.x) |> 
+  filter(str_detect(date, "-"))
+
+March
+
+```
+
+*April* 
+
+```{r}
+April_url <- "https://www.umpd.umd.edu/stats/incident_logs.cfm?year=2023&month=4"
+
+April_value <- April_url |> 
+  read_html() |> 
+  html_table()  
+
+```
+
+
+#create and clean data frame
+
+```{r}
+April_df <- data.frame(April_value) |> 
+  clean_names() |> rename(umpd_case_number = umpd_casenumber, date = occurred_date_timelocation, date_report = report_date_time, address = var_6) |> 
+mutate(date = date(mdy_hm(date)))  
+
+glimpse(April_df)
+  
+```
+
+#create new data frame with addresses and umpd case numbers
+
+```{r}
+April_address <- April_df |> 
+ select(umpd_case_number, address) |> 
+ filter(!str_detect(address, "NA"))
+
+glimpse(April_address)
+
+```
+
+#rejoin address with original data frame 
+
+```{r}
+
+April <- inner_join(April_address, April_df, by = "umpd_case_number") |> 
+  select(-address.y) |> 
+  rename(address = address.x) |> 
+  filter(str_detect(date, "-"))
+
+April
+
+```
+
+
+*May* 
+
+```{r}
+May_url <- "https://www.umpd.umd.edu/stats/incident_logs.cfm?year=2023&month=5"
+
+May_value <- May_url |> 
+  read_html() |> 
+  html_table()  
+
+```
+
+#create and clean data frame
+
+```{r}
+May_df <- data.frame(May_value) |> 
+  clean_names() |> rename(umpd_case_number = umpd_casenumber, date = occurred_date_timelocation, date_report = report_date_time, address = var_6) |> 
+mutate(date = date(mdy_hm(date)))  
+
+glimpse(May_df)
+
+```
+
+#create new data frame with addresses and umpd case numbers
+
+```{r}
+May_address <- May_df |> 
+ select(umpd_case_number, address) |> 
+ filter(!str_detect(address, "NA"))
+
+glimpse(January_address)
+
+```
+
+#rejoin address with original data frame 
+
+```{r}
+
+May <- inner_join(May_address, May_df, by = "umpd_case_number") |> 
+  select(-address.y) |> 
+  rename(address = address.x) |> 
+  filter(str_detect(date, "-"))
+
+glimpse(May)
+
+```
+
+
+*June* 
+
+```{r}
+June_url <- "https://www.umpd.umd.edu/stats/incident_logs.cfm?year=2023&month=6"
+```
+
+
+```{r}
+June_value <- June_url |> 
+  read_html() |> 
+  html_table()  
+```
+
+#create and clean data frame
+
+```{r}
+June_df <- data.frame(June_value) |> 
+  clean_names() |> rename(umpd_case_number = umpd_casenumber, date = occurred_date_timelocation, date_report = report_date_time, address = var_6) |> 
+mutate(date = date(mdy_hm(date)))  
+
+glimpse(June_df)
+  
+```
+
+#create new data frame with addresses and umpd case numbers
+
+```{r}
+June_address <- June_df |> 
+ select(umpd_case_number, address) |> 
+ filter(!str_detect(address, "NA"))
+
+glimpse(June_address)
+
+```
+
+#rejoin address with original data frame 
+
+```{r}
+June <- inner_join(June_address, June_df, by = "umpd_case_number") |> 
+  select(-address.y) |> 
+  rename(address = address.x) |> 
+  filter(str_detect(date, "-"))
+
+glimpse(June)
+
+```
+
+*July* 
+
+```{r}
+July_url <- "https://www.umpd.umd.edu/stats/incident_logs.cfm?year=2023&month=7"
+```
+
+```{r}
+July_value <- July_url |> 
+  read_html() |> 
+  html_table()  
+```
+
+#create and clean data frame
+
+```{r}
+July_df <- data.frame(July_value) |> 
+  clean_names() |> rename(umpd_case_number = umpd_casenumber, date = occurred_date_timelocation, date_report = report_date_time, address = var_6) |> 
+mutate(date = date(mdy_hm(date)))  
+
+glimpse(July_df)
+  
+```
+
+#create new data frame with addresses and umpd case numbers
+
+```{r}
+July_address <- July_df |> 
+ select(umpd_case_number, address) |> 
+ filter(!str_detect(address, "NA"))
+
+glimpse(July_address)
+
+```
+
+#rejoin address with original data frame 
+
+```{r}
+
+July <- inner_join(July_address, July_df, by = "umpd_case_number") |> 
+  select(-address.y) |> 
+  rename(address = address.x) |> 
+  filter(str_detect(date, "-"))
+
+glimpse(July)
+
+```
+
+
+*August* 
+
+```{r}
+August_url <- "https://www.umpd.umd.edu/stats/incident_logs.cfm?year=2023&month=8"
+
+```
+
+```{r}
+August_value <- August_url |> 
+  read_html() |> 
+  html_table()  
+```
+
+#create and clean data frame
+
+```{r}
+August_df <- data.frame(August_value) |> 
+  clean_names() |> rename(umpd_case_number = umpd_casenumber, date = occurred_date_timelocation, date_report = report_date_time, address = var_6) |> 
+mutate(date = date(mdy_hm(date)))  
+
+glimpse(August_df)
+  
+```
+
+#create new data frame with addresses and umpd case numbers
+
+```{r}
+August_address <- August_df |> 
+ select(umpd_case_number, address) |> 
+ filter(!str_detect(address, "NA"))
+
+glimpse(August_address)
+
+```
+
+#rejoin address with original data frame 
+
+```{r}
+
+August <- inner_join(August_address, August_df, by = "umpd_case_number") |> 
+  select(-address.y) |> 
+  rename(address = address.x) |> 
+  filter(str_detect(date, "-"))
+
+glimpse(August)
+
+```
+
+
+*September*
+
+```{r}
+September_url <- "https://www.umpd.umd.edu/stats/incident_logs.cfm?year=2023&month=9"
+
+```
+
+```{r}
+September_value <- September_url |> 
+  read_html() |> 
+  html_table()  
+```
+
+#create and clean data frame
+
+```{r}
+September_df <- data.frame(September_value) |> 
+  clean_names() |> rename(umpd_case_number = umpd_casenumber, date = occurred_date_timelocation, date_report = report_date_time, address = var_6) |> 
+mutate(date = date(mdy_hm(date)))  
+
+glimpse(September_df)
+  
+```
+
+#create new data frame with addresses and umpd case numbers
+
+```{r}
+September_address <- September_df |> 
+ select(umpd_case_number, address) |> 
+ filter(!str_detect(address, "NA"))
+
+glimpse(September_address)
+
+```
+
+#rejoin address with original data frame 
+
+```{r}
+
+September <- inner_join(September_address, September_df, by = "umpd_case_number") |> 
+  select(-address.y) |> 
+  rename(address = address.x) |> 
+  filter(str_detect(date, "-"))
+
+glimpse(September)
+
+```
+
+*October*
+
+```{r}
+October_url <- "https://www.umpd.umd.edu/stats/incident_logs.cfm?year=2023&month=10"
+
+```
+
+
+```{r}
+October_value <- October_url |> 
+  read_html() |> 
+  html_table()  
+```
+
+#create and clean data frame
+
+```{r}
+October_df <- data.frame(October_value) |> 
+  clean_names() |> rename(umpd_case_number = umpd_casenumber, date = occurred_date_timelocation, date_report = report_date_time, address = var_6) |> 
+mutate(date = date(mdy_hm(date)))  
+
+glimpse(October_df)
+  
+```
+
+#create new data frame with addresses and umpd case numbers
+
+```{r}
+October_address <- October_df |> 
+ select(umpd_case_number, address) |> 
+ filter(!str_detect(address, "NA"))
+
+glimpse(October_address)
+
+```
+
+#rejoin address with original data frame 
+
+```{r}
+
+October <- inner_join(October_address, October_df, by = "umpd_case_number") |> 
+  select(-address.y) |> 
+  rename(address = address.x) |> 
+  filter(str_detect(date, "-"))
+
+glimpse(October)
+
+```
+
+*November*
+
+```{r}
+November_url <- "https://www.umpd.umd.edu/stats/incident_logs.cfm?year=2023&month=11"
+
+```
+
+```{r}
+November_value <- November_url |> 
+  read_html() |> 
+  html_table()  
+```
+
+#create and clean data frame
+
+```{r}
+November_df <- data.frame(November_value) |> 
+  clean_names() |> rename(umpd_case_number = umpd_casenumber, date = occurred_date_timelocation, date_report = report_date_time, address = var_6) |> 
+mutate(date = date(mdy_hm(date)))  
+
+glimpse(November_df)
+  
+```
+
+#create new data frame with addresses and umpd case numbers
+
+```{r}
+November_address <- November_df |> 
+ select(umpd_case_number, address) |> 
+ filter(!str_detect(address, "NA"))
+
+glimpse(November_address)
+
+```
+
+#rejoin address with original data frame 
+
+```{r}
+
+November <- inner_join(November_address, November_df, by = "umpd_case_number") |> 
+  select(-address.y) |> 
+  rename(address = address.x) |> 
+  filter(str_detect(date, "-"))
+
+glimpse(November)
+
+```
+
+
+*December*
+#data not available as of 12.03.23
+
+
+***combine all months into one data frame "crime_incident_logs_2023"***
+
+```{r}
+crime_incident_logs_2023 <- bind_rows(January_clean, February, March, April, May, June, July, August, September, October, November) |>
+  filter(!is.na(date)) |> 
+  filter(!str_detect(date, "2022")) |> 
+  mutate(incident_date = date) |>
+  mutate(report_date = date_report) |>
+  mutate(report_date = date(mdy_hm(report_date))) |> 
+  select(-date, -date_report) |> 
+  arrange(desc(incident_date)) |> 
+  select(-var_6)
+
+crime_incident_logs_2023
+
+```
+
+
+##Load in and Clean 2023 Arrest Logs##
+https://www.umpd.umd.edu/stats/arrest_report.cfm?year=2023
+
+To tell a more complete story, I decided to load in and join UMPD's arrest log information. The arrest logs contain more detailed notes, which could lead to further stories. The arrest logs also contain the UMPD case numbers, which means that the arrests could be joined with the incident report, if they were the same incident as denoted by the case number. The arrest logs also contain demographic information, which was missing from the incident reports. 
+
+The arrest logs tables were in similar format as the incident report logs. I used the same approach of creating two separate data frames, and then joining them back together, as I had done for the incident report addresses.
+
+```{r}
+arrest_log_url <- "https://www.umpd.umd.edu/stats/arrest_report.cfm?year=2023"
+
+arrest_log <- arrest_log_url |> 
+  read_html() |> 
+  html_table() 
+
+arrest_log
+```
+
+#create data frame arrest_log
+
+```{r}
+arrest_log <- data.frame(arrest_log) |> 
+  clean_names() |> 
+  rename(arrest_number = arrestnumber, arrest_date = arrested_date_timecharge)
+glimpse(arrest_log)
+
+arrest_log
+```
+
+#clean and create data frame without the notes
+
+**Disclaimer, I used Chat GPT to support creating the filters below. This was my prompt, worded in a way so Chat GPT didn't get too confused:
+
+My data frame is called "arrest_log_3' and the column abcs has values formatted like "xx/xx/xx xx:xx" and other rows contain values like "I like to run." how can I create a filter that only keeps the values formatted like ""xx/xx/xx xx:xx" in my abcs column?
+
+```{r}
+arrest_log_no_notes <- arrest_log |>
+  filter(str_detect(arrest_date, "\\d{2}/\\d{2}/\\d{2} \\d{2}:\\d{2}"))  |> 
+  mutate(arrest_number = as.character(arrest_number)) |> 
+  mutate(arrest_date = date(mdy_hm(arrest_date))) |> 
+  mutate(age = as.integer(age))
+
+glimpse(arrest_log_no_notes)
+
+```
+
+#create data frame with notes and arrest date only
+
+```{r}
+arrest_with_notes <- arrest_log |> 
+  filter(!str_detect(arrest_date, "\\d{2}/\\d{2}/\\d{2} \\d{2}:\\d{2}")) |> 
+  mutate(notes = arrest_date) |> 
+  mutate(arrest_number = as.character(arrest_number)) |> 
+  select(arrest_number, notes)
+
+arrest_with_notes
+
+```
+
+#join both data frames 
+arrest_log_no_notes
+arrest_with_notes
+
+```{r}
+
+arrest_log_full <- full_join(arrest_log_no_notes, arrest_with_notes, by = "arrest_number")
+
+arrest_log_full
+
+```
+
+
+#join arrest_log_full data frame with crime_incident_logs_2023
+
+```{r}
+
+umd_crime_2023 <- full_join(arrest_log_full, crime_incident_logs_2023, by = "umpd_case_number")
+
+umd_crime_2023
+
+glimpse(arrest_log_full)
+glimpse(crime_incident_logs_2023)
+glimpse(umd_crime_2023)
+
+```
+
+
+**Look at incident "types" and add new column "sub_type" and "sub_type_detail"**
+
+As I went through the process of exporting the data frame, "umd_crime_2023" into open refine to clean and sort, I kept finding recommended "groupings" for incident "type" that I didn't want to combine together without separating other important details, like noting whether an incident was considered "title ix related." "assist other agency" also had multiple labels, and so I pulled these two sub categories into their own columns in R studio. So while I didn't end up directly cleaning and exporting a .csv file in open refine, filtering the data on open refine helped me make cleaning decision in R studio. 
+
+*Disclaimer: I used Chat GPT to help with splitting the values in one column into two columns. 
+https://chat.openai.com/share/1220490b-7941-4366-b33b-e34944b2ae6d
+
+```{r}
+umd_crime_2023_detail <- umd_crime_2023 |> 
+  mutate(sub_type = case_when(
+    str_detect(type, "\\(title ix related\\)") ~ "title ix related",
+    str_detect(type, "assist other agency") ~ str_remove(type, "assist other agency / "),
+    TRUE ~ NA_character_
+  )) |> 
+  separate(type, into = c("type", "sub_type"), sep = " / ", extra = "merge") |> 
+  arrange(sub_type) 
+
+umd_crime_2023_detail
+```
+
+```{r}
+umd_crime_2023_detail2 <- umd_crime_2023_detail |> 
+  mutate(sub_type_detail = str_replace(type, "\\(Title IX Related\\)", "")) %>%
+  separate(type, into = c("type", "sub_type_detail"), sep = " \\(", extra = "merge")
+
+umd_crime_2023_detail2
+
+```
+
+#write csv to export to open refine
+After exporting to open refine, I am confirming that the data frame is good to go; no further changes were needed. Previous exports to open refine showed areas where the cleaning in R could be improved. This process led me to create the columns sub_type" and "sub_type_detail," as noted above. 
+
+#AC path
+write.csv(umd_crime_2023_detail2,"/Volumes/ext4GB/camacho-alisha-jour-772/camacho-alisha-jour-772.2/Grad Assignment/UMD Crime Take II copy/umd-crime-story/data/umd_crime_2023_detail2.csv")
+
+```{r}
+write.csv(umd_crime_2023_detail2,"/data/umd_crime_2023_detail2.csv")
+```
+
+
+#Use Geocode to Extract Lat and Long Coordinates for addresses
+243 out of 1677 rows came back with lat/long coordinates. The remaining 1434 addresses require further cleaning. 
+
+```{r}
+umd_crime_2023_address <- umd_crime_2023_detail2 |> 
+  geocode(address, method = 'osm', lat = latitude , long = longitude) 
+
+umd_crime_2023_address |> 
+  arrange(latitude)
+```
+
+#create data frames with showing count incident types in addresses with lat and long coordinates and "umd_crime_2023_address"
+
+#determine which counts incident types are best accounted for in both data frames to prepare for mapping. 
+
+```{r}
+lat_long <- umd_crime_2023_address |> 
+  filter(!str_detect(latitude, "NA")) |> 
+  group_by(type) |> 
+  summarise(count = n()) |> 
+  arrange(desc(count))
+
+lat_long
+
+#count types
+umd_crime_type <- umd_crime_2023_address |> 
+  group_by(type) |> 
+  summarise(count = n()) |> 
+  arrange(desc(count))
+
+umd_crime_type
+
+```
+
+#join the two data frames and create filtered list for mapping
+
+By joining the two data frames, determined which incident types with lat long coordinates account for at least 60% of the total incident types. The resulting incident types were turned into a filtered list with the goal of mapping the data. 
+
+lat_long
+umd_crime_type
+
+```{r}
+
+address_mapping <- full_join(lat_long, umd_crime_type, by = "type") |> 
+  rename(lat_long = count.x, total_count = count.y) |> 
+  filter(!str_detect(lat_long, "NA")) |> 
+  mutate(percent_lat_long = (lat_long/total_count)*100) |> 
+  mutate(percent_lat_long = as.integer(percent_lat_long)) |> 
+  mutate(map = (percent_lat_long >= "60")) |> 
+  filter(map) |> 
+  select(type, map) 
+
+address_mapping
+
+#create filter with results 
+
+map <- c("DWI/DUI", "Injured/Sick Person", "Alcohol Violation", "Disorderly Conduct", "Suspicious Activity", "Resisting Arrest", "Fire")
+
+```
+
+#prepare for mapping
+
+```{r}
+incidents_to_map <- umd_crime_2023_address |> 
+  filter(!str_detect(latitude, "NA")) |> 
+  filter(type %in% map) |> 
+  select(type, latitude, longitude)
+
+incidents_to_map
+
+write.csv(incidents_to_map, "/Volumes/ext4GB/camacho-alisha-jour-772/camacho-alisha-jour-772.2/Grad Assignment/UMD Crime Take II copy/umd-crime-story/data/incidents_to_map.csv")
+```
+
+#write csv
+#AC path
+"/Volumes/ext4GB/camacho-alisha-jour-772/camacho-alisha-jour-772.2/Grad Assignment/UMD Crime Take II copy/umd-crime-story/data/incidents_to_map.csv")
+
+```{r}
+write.csv(incidents_to_map, "/data/incidents_to_map.csv")
+```
+
+
+#Reviewing which incidents stand out to guide map title/description 
+
+```{r}
+incidents_to_map |> 
+  group_by(type) |> 
+  summarise(count = n())
+```
+
+
+#Datawrapper
+
+Datawrapper flagged that "112 symbols won't be shown on the map due to issues with their values" noting that the symbols are "outside the boundaries" of Maryland. I also deleted an additional outlier on the map. So roughly 7.75% of the total incidents reported is reflected on the map (130/1677 incidents).
+
+I also could not determine how to "hide regions without data" under appearance in the Symbol Map, like we had done in previous labs, so the resulting map isn't something I would want to share. 
+
+#Link to map: https://www.datawrapper.de/_/6v7aE/.
+
+
+###
+
+**Filter for top 20 Crimes on Campus**
+
+I think an interesting story could be reviewing the top 20 crimes on campus, and learning more about what "injured/sick person" means, along with what falls into the category "other incident."
+
+I am using the cleaned data frame, umd_crime_2023_detail2, without the lat/long coordinates.
+
+```{r}
+top_20 <- umd_crime_2023_detail2 |> 
+  group_by(type) |> 
+  summarise(count = n()) |> 
+  filter(count >= 14) |> 
+  arrange(desc(count))
+
+top_20
+```
+
+Upon seeing the results, 4 types have 14 counts, placing the four categories at #20. I am deciding to keep them, since #19 is hate bias incidents, which has been a concern on campus/relevant to recent events, and the "Top 19" results doesn't have the ring as the "Top 20". 
+
+#write csv to load into data wrapper 
+
+#AC path 
+write.csv(top_20, "/Volumes/ext4GB/camacho-alisha-jour-772/camacho-alisha-jour-772.2/Grad Assignment/UMD Crime Take II copy/umd-crime-story/data/top_20.csv")
+
+```{r}
+write.csv(top_20, "/data/top_20.csv")
+```
+
+#Link to chart
+https://www.datawrapper.de/_/G9YoP/
+
+
+**2023 Incidents by Disposition Status**
+
+I also looked at the status of dispositions by percentage for 2023
+
+```{r}
+
+disposition_status<- umd_crime_2023_detail2 |> 
+  group_by(disposition) |> 
+  summarise(count = n()) |> 
+  mutate(count_percent = (count/sum(count))) |> 
+  mutate(percentage = scales::percent(count_percent)) |> 
+  select(disposition, percentage) |> 
+  mutate(disposition = str_to_title(disposition)) |> 
+  rename("Disposition Status" = disposition) |> 
+  rename("Percentage" = percentage) 
+
+disposition_status
+```
+
+# write csv file to import into datawrapper
+
+#AC Path 
+write.csv(disposition_status,"/Volumes/ext4GB/camacho-alisha-jour-772/camacho-alisha-jour-772.2/Grad Assignment/UMD Crime Take II copy/umd-crime-story/data/disposition_status.csv")
+
+```{r}
+write.csv(disposition_status,"/data/disposition_status.csv")
+```
+
+# link to chart: https://www.datawrapper.de/_/FZE6q/
+
+
+**Incidents Over Time (by month)**
+
+I also wanted to look at when the incidents occurred by month in 2023
+
+```{r}
+
+incident_by_month <- umd_crime_2023_detail2 |> 
+  select(incident_date, type) |> 
+  arrange(incident_date) |> 
+  mutate(month_name = month(incident_date)) |> 
+  group_by(month_name) |> 
+  summarise(count = n())|>
+  arrange(month_name) |> 
+  mutate(month_name = month.abb[month_name]) |> 
+  rename(Month = month_name) |> 
+  rename("Incident Count" = count)
+  
+incident_by_month
+```
+
+#Prepare for export to Datawrapper 
+
+#AC path
+write.csv(incident_by_month,"/Volumes/ext4GB/camacho-alisha-jour-772/camacho-alisha-jour-772.2/Grad Assignment/UMD Crime Take II copy/umd-crime-story/data/incident_by_month.csv")
+
+
+```{r}
+write.csv(incident_by_month,"/data/incident_by_month.csv")
+```
+
+# link to chart: https://www.datawrapper.de/_/wxuuO/
+
+
+***Story Ideas***
+
+A few different story ideas stand out to me: 
+
+1) An overview of 2023 crime and incident reports. Ideally, the process above would be replicated for the previous 5-10 years to place 2023 in context. Does anything notable stand out in 2023? 
+
+2) What is the deal with all the sick/injured calls? Are they alcohol related? Or are they something else?
+
+3) What is the breakdown of "Other incidents"? Is this the "other services" UMPD undertakes, like helping someone jump a car, or something else? That could lead to a nice story on UMPD serving the campus community in untraditional ways, or at least, in ways you don't think of when you think of the responsibilities of a police department. 
+
+4) Cleaning the addresses/getting more information would lead to more story ideas. Is there a pattern of where certain incidents are happening more? 
+
+5) Hate bias incidents. 15 hate bias incidents have been recorded by UMPD this year; however, the Office of Diversity and Inclusion publishes a Bias Reporting Dashboard made available to individuals affiliated with the university. As of November 30th, the department published 187 incidents. Bias incident reports can be completed through the Office of Diversity and Inclusion incident report form, allowing individuals to provide an overview of the incident while remaining anonymous if that is their preference. 
+
+It remains unclear if and when the Office of Diversity and Inclusion would contact UMPD on a reported incident and vice versa. I would be interested to know when/if the Office of Diversity and Inclusion would contact UMPD. 
+
+Bias Reporting Dashboard for context: https://umd.edu/bias-reporting-dashboard
+
+6) Why did incident reports peak in September and October? How does this compare to previous years? What kinds of incident types occurred? 
+
